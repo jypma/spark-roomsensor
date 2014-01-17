@@ -74,23 +74,6 @@ void printAddress(DeviceAddress deviceAddress)
 DHT dht(DHT_PIN, DHT_TYPE);
 #endif
 
-void startADC() {
-	// REFS1 REFS0          --> 0 0 AREF, Internal Vref turned off
-	// MUX3 MUX2 MUX1 MUX0  --> 1110 1.1V (VBG)
-    ADMUX = (0<<REFS1) | (0<<REFS0) | (0<<ADLAR) | (1<<MUX3) | (1<<MUX2) | (1<<MUX1) | (0<<MUX0);
-
-    // Start a conversion
-    ADCSRA |= _BV( ADSC );
-}
-
-int endADC() {
-    // Wait for it to complete
-    while( ( (ADCSRA & (1<<ADSC)) != 0 ) );
-
-    // Scale the value
-    return (((InternalReferenceVoltage * 1023L) / ADC) + 5L) / 10L;
-}
-
 void setup () {
     Serial.begin(57600);
     Serial.print("\n[RoomSensor]");
@@ -124,18 +107,12 @@ void setup () {
     pinMode(LED_PIN, OUTPUT);
 }
 
-int getSupplyVoltage() {
-    startADC();
-    endADC();
-    startADC();
-    endADC();
-    int voltage = 0;
-    for (byte b = 0; b < 16; b++) {
-        startADC();
-        voltage += endADC();
-    }
-    return voltage >> 4;
-}
+unsigned int getSupplyVoltage() {
+    unsigned int halfVoltage = analogRead(VCC_PIN);
+    if (halfVoltage > VCC_MAX) halfVoltage = VCC_MAX;
+    if (halfVoltage < VCC_MIN) halfVoltage = VCC_MIN;
+    return (halfVoltage - VCC_MIN) * 100 / (VCC_MAX - VCC_MIN);
+ }
 
 void sendTempPacket() {
     digitalWrite(LED_PIN, HIGH);
