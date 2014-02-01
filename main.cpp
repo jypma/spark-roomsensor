@@ -22,7 +22,7 @@
 #include <Arduino.h>
 #include <JeeLib.h>
 
-#include "stue.h"
+#include "sove.h"
 
 #define DEBUG
 
@@ -42,16 +42,16 @@ const long InternalReferenceVoltage = 1095L;  // Change this to the reading from
 #ifdef DHT_PIN
 unsigned char payload[] = "R1         ";
 //                           ^^--------- recipient, always spaces for broadcast
-//                             ^-------- 1 = temperature
+//                             ^-------- 10 = temperature 2.0
 //                              ^^------ temperature, 1/100 deg celcius, signed 16-bit int
-//                                ^^---- battery, centivolts
+//                                ^^---- battery, %
 //                                  ^^-- humidity, %
 #else
 unsigned char payload[] = "R1       ";
 //                           ^^------- recipient, always spaces for broadcast
-//                             ^------ 1 = temperature
+//                             ^------ 10 = temperature 2.0
 //                              ^^---- temperature, signed 16-bit int
-//                                ^^-- battery, centivolts
+//                                ^^-- battery, %
 #endif
 
 #ifdef DS18_PIN
@@ -79,6 +79,7 @@ void setup () {
     Serial.print("\n[RoomSensor]");
     rf12_initialize(3, RF12_868MHZ, 5);
     payload[1] = ROOM_SENSOR_ID;
+    payload[4] = 10;
 
 #ifdef DS18_PIN
     sensors.begin();
@@ -109,9 +110,26 @@ void setup () {
 
 unsigned int getSupplyVoltage() {
     unsigned int halfVoltage = analogRead(VCC_PIN);
+#ifdef DEBUG
+    Serial.print("VCC:");
+    Serial.println(halfVoltage);
+#endif
+    halfVoltage = analogRead(VCC_PIN);
+#ifdef DEBUG
+    Serial.print("VCC:");
+    Serial.println(halfVoltage);
+#endif
+    halfVoltage = analogRead(VCC_PIN);
+#ifdef DEBUG
+    Serial.print("VCC:");
+    Serial.println(halfVoltage);
+#endif
     if (halfVoltage > VCC_MAX) halfVoltage = VCC_MAX;
     if (halfVoltage < VCC_MIN) halfVoltage = VCC_MIN;
-    return (halfVoltage - VCC_MIN) * 100 / (VCC_MAX - VCC_MIN);
+    unsigned int percentage = (halfVoltage - VCC_MIN) * 100 / (VCC_MAX - VCC_MIN);
+#ifdef DEBUG
+#endif
+    return percentage;
  }
 
 void sendTempPacket() {
@@ -160,7 +178,6 @@ void sendTempPacket() {
     Serial.print(tempC);
 #endif
 
-    payload[4] = 1;
     int t = (int) (tempC * 100);
     *((int*)(payload + 5)) = (int) t;
 
